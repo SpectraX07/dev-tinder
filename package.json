@@ -1,0 +1,24 @@
+{
+  "name": "devtinder",
+  "version": "1.0.0",
+  "description": "Tinder for developers",
+  "keywords": [
+    "nodejs",
+    "javascript",
+    "tinder"
+  ],
+  "license": "ISC",
+  "author": "Subrata Jana",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "i": "^0.3.7",
+    "npm": "^11.14.1"
+  }
+}

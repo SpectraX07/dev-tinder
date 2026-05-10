@@ -1,0 +1,51 @@
+{
+  "verbose": true,
+  "ignore": [
+    ".git",
+    "node_modules/**/node_modules",
+    "logs",
+    "*.log",
+    "coverage",
+    "dist",
+    "build",
+    "tmp",
+    "temp",
+    "*.test.js",
+    "*.spec.js",
+    "__tests__",
+    "test",
+    "tests",
+    ".env",
+    ".env.*",
+    "*.md",
+    "*.json",
+    "*.yml",
+    "*.yaml",
+    "*.config.js",
+    "jest.config.js",
+    "babel.config.js",
+    "webpack.config.js",
+    "tsconfig.json",
+    ".vscode",
+    ".idea",
+    "*.swp",
+    "*.swo",
+    "*.bak",
+    "*.tmp",
+    "*.temp",
+    "uploads",
+    "public/uploads",
+    "src/public/uploads",
+    "src/views/**/*.ejs"
+  ],
+  "watch": [
+    "src/**/*.js",
+    "src/**/*.mjs",
+    "src/**/*.cjs"
+  ],
+  "ext": "js,mjs,cjs,json",
+  "delay": "1000",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
