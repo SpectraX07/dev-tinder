@@ -6,7 +6,7 @@ import { request } from 'express';
 import serverConfig from '../config/server.js';
 
 export const userAuth = catchAsync(async (req, res, next) => {
-  const { accessToken } = req.cookies;
+  const accessToken = req.cookies[serverConfig.jwt.access.cookieName];
 
   if (!accessToken) {
     throw AppError.unauthorized('Token not found');

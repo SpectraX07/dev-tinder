@@ -80,3 +80,12 @@ export const getProfileDetails = catchAsync(async (req, res) => {
   const cookie = req.cookies;
   res.respond.ok(req.user);
 });
+
+/**
+ * POST logout
+ */
+
+export const logout = catchAsync(async (req, res, next) => {
+  res.clearCookie(serverConfig.jwt.access.cookieName);
+  res.respond.ok(null, 'You have been logged out.');
+});

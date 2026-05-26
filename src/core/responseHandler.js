@@ -44,7 +44,9 @@ let responseLogger = defaultResponseLogger;
  */
 export const setResponseLogger = (logger) => {
   if (!logger || typeof logger.error !== 'function') {
-    throw new TypeError('setResponseLogger(): logger must be an object with an error() method');
+    throw new TypeError(
+      'setResponseLogger(): logger must be an object with an error() method',
+    );
   }
   responseLogger = logger;
 };
@@ -154,7 +156,7 @@ const buildResponder = (res) => {
    * @param {number} statusCode
    * @param {Record<string, unknown> | null} [payload]
    */
-  const send = (statusCode, payload = null) => {
+  const send = (statusCode, payload = null, message = null) => {
     if (NOBODY_CODES.has(statusCode)) return res.status(statusCode).end();
 
     const isSuccess = statusCode < 400;
@@ -163,6 +165,7 @@ const buildResponder = (res) => {
         ? {
             status: 'success',
             statusCode,
+            ...(message !== null && { message }),
             ...(payload !== null && { data: payload }),
           }
         : { status: 'error', statusCode, ...(payload !== null && payload) },
@@ -172,11 +175,12 @@ const buildResponder = (res) => {
   return {
     /** Any status: `res.respond.send(HTTP.ACCEPTED, { jobId })`. */
     send,
-    ok: (data) => send(HTTP.OK, data),
-    created: (data) => send(HTTP.CREATED, data),
-    accepted: (data) => send(HTTP.ACCEPTED, data),
+    ok: (data, message) => send(HTTP.OK, data, message),
+    created: (data, message) => send(HTTP.CREATED, data, message),
+    accepted: (data, message) => send(HTTP.ACCEPTED, data, message),
     noContent: () => send(HTTP.NO_CONTENT),
-    partialContent: (data) => send(HTTP.PARTIAL_CONTENT, data),
+    partialContent: (data, message) =>
+      send(HTTP.PARTIAL_CONTENT, data, message),
     notModified: () => send(HTTP.NOT_MODIFIED),
     badRequest: (msg, extra) =>
       send(HTTP.BAD_REQUEST, { message: msg, ...extra }),
@@ -320,9 +324,15 @@ const jsonError = (res, statusCode, payload) =>
 export const errorMiddleware = (err, _req, res, _next) => {
   if (res.headersSent) {
     if (IS_DEV) {
-      responseLogger.error('[errorMiddleware] Response already sent; skipping JSON body.', err);
+      responseLogger.error(
+        '[errorMiddleware] Response already sent; skipping JSON body.',
+        err,
+      );
     } else {
-      responseLogger.error('[errorMiddleware] Response already sent; skipping.', err.message);
+      responseLogger.error(
+        '[errorMiddleware] Response already sent; skipping.',
+        err.message,
+      );
     }
     return;
   }

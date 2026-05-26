@@ -29,6 +29,7 @@ router.post(
   validate({ body: signupSchema }),
   userController.signup,
 );
+router.post('/auth/logout', userController.logout);
 
 router.use(userAuth);
 
