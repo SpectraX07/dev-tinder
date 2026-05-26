@@ -1,9 +1,8 @@
 import { AppError } from '../../core/responseHandler.js';
 import catchAsync from '../../utils/CatchAsync.js';
-import { verifyAccessToken } from '../../utils/jwt.js';
-import { signAccessToken, signToken } from '../../utils/jwt/signer.js';
 import * as userService from './user.service.js';
 import jwt from 'jsonwebtoken';
+import serverConfig from '../../config/server.js';
 
 /**
  * GET /userDetails?email=
@@ -64,20 +63,12 @@ export const doLogin = catchAsync(async (req, res) => {
     throw AppError.unauthorized('Invalid credentials');
   }
 
-  // const token = await jwt.sign(
-  //   { userId: userData._id },
-  //   process.env.JWT_ACCESS_SECRET,
-  // );
+  const token = await userData.getJWT();
 
-  const token = await signAccessToken(String(userData._id), {
-    claims: { userId: String(userData._id) }, // only if you need userId in the token body in addition to sub
-  });
-  const { payload } = await verifyAccessToken(token);
-  res.cookie('token', token);
+  res.cookie(serverConfig.jwt.access.cookieName, token);
 
   res.respond.ok({
     token,
-    payload,
   });
 });
 
@@ -87,5 +78,5 @@ export const doLogin = catchAsync(async (req, res) => {
 
 export const getProfileDetails = catchAsync(async (req, res) => {
   const cookie = req.cookies;
-  console.log(cookie);
+  res.respond.ok(req.user);
 });

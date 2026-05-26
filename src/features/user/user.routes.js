@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.middleware.js';
 import * as userController from './user.controller.js';
-import feedRouter from '../../routes/Feed.routes.js';
+import { userAuth } from '../../middleware/auth.middleware.js';
 import {
   mongoIdSchema,
   getUserByEmailSchema,
@@ -17,18 +17,29 @@ import {
 
 const router = Router();
 
-router.use('/feed', feedRouter);
+// Auth Routes
+router.post(
+  '/auth/login',
+  validate({ body: loginSchema }),
+  userController.doLogin,
+);
 
-router.post('/login', validate({ body: loginSchema }), userController.doLogin);
+router.post(
+  '/auth/signup',
+  validate({ body: signupSchema }),
+  userController.signup,
+);
+
+router.use(userAuth);
+
+// Profile Routes
+router.get('/profile/view', userController.getProfileDetails);
 
 router.get(
   '/userDetails',
   validate({ query: getUserByEmailSchema }),
   userController.getUserByEmail,
 );
-
-router.post('/signup', validate({ body: signupSchema }), userController.signup);
-router.get('/profile', userController.getProfileDetails);
 
 router
   .route('/:id')
