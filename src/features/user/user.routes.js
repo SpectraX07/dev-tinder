@@ -13,6 +13,7 @@ import {
   signupSchema,
   updateUserSchema,
   loginSchema,
+  changePasswordSchema,
 } from './user.validator.js';
 
 const router = Router();
@@ -35,20 +36,15 @@ router.use(userAuth);
 
 // Profile Routes
 router.get('/profile/view', userController.getProfileDetails);
-
-router.get(
-  '/userDetails',
-  validate({ query: getUserByEmailSchema }),
-  userController.getUserByEmail,
+router.patch(
+  '/profile/edit',
+  validate({ body: updateUserSchema }),
+  userController.updateUser,
 );
-
-router
-  .route('/:id')
-  .get(validate({ params: mongoIdSchema }), userController.getUserById)
-  .patch(
-    validate({ params: mongoIdSchema, body: updateUserSchema }),
-    userController.updateUser,
-  )
-  .delete(validate({ params: mongoIdSchema }), userController.deleteUser);
+router.patch(
+  '/profile/password',
+  validate({ body: changePasswordSchema }),
+  userController.changePassword,
+);
 
 export default router;

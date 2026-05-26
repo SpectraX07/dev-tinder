@@ -6,13 +6,13 @@
 
 - POST /user/auth/signup -- done
 - POST /user/auth/login -- done
-- POST /user/auth/logout --
+- POST /user/auth/logout -- done
 
 ## ProfileRouter
 
-- GET /user/profile/view
-- PATCH /user/profile/edit
-- PATCH /user/profile/password
+- GET /user/profile/view --done
+- PATCH /user/profile/edit -- done
+- PATCH /user/profile/password -- done
 
 ## RequestRouter
 

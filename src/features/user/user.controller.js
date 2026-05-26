@@ -5,40 +5,26 @@ import jwt from 'jsonwebtoken';
 import serverConfig from '../../config/server.js';
 
 /**
- * GET /userDetails?email=
- */
-export const getUserByEmail = catchAsync(async (req, res) => {
-  const user = await userService.getUserByEmail(req.query.email);
-  res.respond.ok({ user });
-});
-
-/**
- * GET /:id
- */
-export const getUserById = catchAsync(async (req, res) => {
-  const user = await userService.getUserById(req.params.id);
-  res.respond.ok({ user });
-});
-
-/**
  * PATCH /:id
  */
 export const updateUser = catchAsync(async (req, res) => {
-  const isEmailExists = await userService.isEmailExists(
-    req.body?.email,
-    req.params?.id,
-  );
-
-  const updated = await userService.updateUser(req.params.id, req.body);
+  const updated = await userService.updateUser(req.user._id, req.body);
   res.respond.ok({ user: updated });
 });
 
 /**
- * DELETE /:id
+ * PATCH /password
  */
-export const deleteUser = catchAsync(async (req, res) => {
-  await userService.deleteUser(req.params.id);
-  res.respond.noContent();
+export const changePassword = catchAsync(async (req, res) => {
+  const user = req.user;
+  const isCurrentPasswordValid = await user.comparePassword(
+    req.body.currentPassword,
+  );
+  if (!isCurrentPasswordValid) {
+    throw AppError.forbidden('Current password is not valid');
+  }
+  const response = await userService.changePassword(req.user._id, req.body);
+  res.respond.ok(response);
 });
 
 /**
@@ -77,7 +63,6 @@ export const doLogin = catchAsync(async (req, res) => {
  */
 
 export const getProfileDetails = catchAsync(async (req, res) => {
-  const cookie = req.cookies;
   res.respond.ok(req.user);
 });
 

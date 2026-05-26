@@ -46,6 +46,16 @@ export const updateUser = async (id, payload) => {
   return updated;
 };
 
+export const changePassword = async (id, payload) => {
+  const updated = await userRepository.changePasswordById(id, payload);
+
+  if (!updated) {
+    throw AppError.notFound('User not found');
+  }
+
+  return updated;
+};
+
 export const createUser = async (payload) => {
   return await userRepository.create(payload);
 };

@@ -4,6 +4,14 @@
 
 import * as z from 'zod';
 
+const passwordValidationSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Must contain one uppercase letter')
+  .regex(/[a-z]/, 'Must contain one lowercase letter')
+  .regex(/[0-9]/, 'Must contain one number')
+  .regex(/[^A-Za-z0-9]/, 'Must contain one special character');
+
 export const mongoIdSchema = z.object({
   id: z
     .string()
@@ -27,25 +35,38 @@ export const updateUserSchema = z
       .min(2, 'Last name is too short')
       .max(50, 'Last name is too long')
       .optional(),
-    email: z.email('Invalid email address').optional(),
+    gender: z.enum(['Male', 'Female', 'Other']).optional(),
+    age: z.coerce.number().min(18).optional(),
+    photoUrl: z.url({ protocol: /^https$/ }).optional(),
+    skills: z.array(z.string()).min(1).optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
   });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string(),
+    newPassword: passwordValidationSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    error: "Passwords don't match",
+    path: ['confirmPassword'], // path of error
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    error: 'New password and current password can not be same',
+    path: 'newPassword',
+  })
+  .strict();
+
 export const signupSchema = z
   .object({
     firstName: z.string().min(2).max(50),
     lastName: z.string().min(2).max(50),
     email: z.string().email(),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Must contain one uppercase letter')
-      .regex(/[a-z]/, 'Must contain one lowercase letter')
-      .regex(/[0-9]/, 'Must contain one number')
-      .regex(/[^A-Za-z0-9]/, 'Must contain one special character'),
+    password: passwordValidationSchema,
     gender: z.enum(['Male', 'Female', 'Other']),
     age: z.coerce.number().min(18),
   })

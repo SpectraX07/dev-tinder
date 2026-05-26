@@ -9,7 +9,7 @@ export const findByEmailWithPassword = async (email) => {
 };
 
 export const findById = async (id) => {
-  return await User.findById(id).lean();
+  return await User.findById(id);
 };
 
 export const updateById = async (id, payload) => {
@@ -17,6 +17,14 @@ export const updateById = async (id, payload) => {
     new: true,
     runValidators: true,
   }).lean();
+};
+
+export const changePasswordById = async (id, payload) => {
+  const user = await User.findById(id);
+
+  user.password = payload.confirmPassword;
+
+  return await user.save();
 };
 
 export const create = async (payload) => {
