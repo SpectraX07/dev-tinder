@@ -20,9 +20,9 @@
 - POST /user/request/ignore/:userID
 - POST /user/request/accept/:requestId
 - POST /user/request/reject/:requestId
+- GET /user/request/getPendingConnection
 
 ## UserRouter
 
 - GET /user/matches
-- GET /user/receivedConnectionRequests
 - GET /user/feed

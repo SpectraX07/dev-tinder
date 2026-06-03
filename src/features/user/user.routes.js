@@ -14,6 +14,7 @@ import {
   updateUserSchema,
   loginSchema,
   changePasswordSchema,
+  feedQuerySchema,
 } from './user.validator.js';
 
 const router = Router();
@@ -36,15 +37,25 @@ router.use(userAuth);
 
 // Profile Routes
 router.get('/profile/view', userController.getProfileDetails);
+
 router.patch(
   '/profile/edit',
   validate({ body: updateUserSchema }),
   userController.updateUser,
 );
+
 router.patch(
   '/profile/password',
   validate({ body: changePasswordSchema }),
   userController.changePassword,
+);
+
+// Feed Routes
+router.get(
+  '/feed',
+  userAuth,
+  validate({ query: feedQuerySchema }),
+  userController.getFeed,
 );
 
 export default router;

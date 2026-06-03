@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "feature": "node scripts/create-feature.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

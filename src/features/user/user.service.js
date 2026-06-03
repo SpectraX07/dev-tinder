@@ -4,6 +4,7 @@
  */
 
 import { AppError } from '../../core/responseHandler.js';
+import { signTokenPair } from '../../utils/jwt/signer.js';
 import * as userRepository from './user.repository.js';
 
 export const getUserByEmail = async (email) => {
@@ -35,6 +36,12 @@ export const getUserById = async (id) => {
 
   return user;
 };
+
+/** Loads user for auth middleware; returns null instead of 404. */
+export const getUserForAuth = async (id) => userRepository.findById(id);
+
+export const issueTokenPair = async (userId) =>
+  signTokenPair(String(userId));
 
 export const updateUser = async (id, payload) => {
   const updated = await userRepository.updateById(id, payload);
@@ -78,4 +85,9 @@ export const isEmailExists = async (email, id = null) => {
   }
 
   return count;
+};
+
+export const getFeed = async (userId, page, limit) => {
+  const offset = limit * (page - 1);
+  return await userRepository.getFeed(userId, limit, offset);
 };

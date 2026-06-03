@@ -1,29 +1,20 @@
 import { AppError } from '../core/responseHandler.js';
-import jwt from 'jsonwebtoken';
 import catchAsync from '../utils/CatchAsync.js';
 import * as userService from '../features/user/user.service.js';
-import { request } from 'express';
-import serverConfig from '../config/server.js';
+import { verifyRequestAccessOrThrow } from '../utils/jwt/verifier.js';
 
 export const userAuth = catchAsync(async (req, res, next) => {
-  const accessToken = req.cookies[serverConfig.jwt.access.cookieName];
+  console.log(req.cookies);
 
-  if (!accessToken) {
-    throw AppError.unauthorized('Token not found');
-  }
+  const { payload } = await verifyRequestAccessOrThrow(req, {
+    prefer: 'cookie',
+  });
 
-  const decodedObj = await jwt.verify(
-    accessToken,
-    serverConfig.jwt.access.secret,
-  );
-
-  const { userId } = decodedObj;
-
-  const user = await userService.getUserById(userId);
-  request.user = user;
-
+  const user = await userService.getUserForAuth(payload.sub);
   if (!user) {
     throw AppError.unauthorized('User not found');
   }
+
+  req.user = user;
   next();
 });

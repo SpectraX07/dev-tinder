@@ -23,8 +23,10 @@ const hasAnySchema = (schemas) => SOURCES.some((key) => schemas[key] != null);
  * Factory for middleware that validates request slices with Zod (`safeParseAsync`).
  *
  * **Atomic behavior:** all configured sources are parsed first. If any fail, `req` is
- * not mutated. On full success, parsed outputs are written to `req.body` / `req.query` /
- * `req.params` (coercions and transforms from Zod apply).
+ * not mutated. On full success, parsed outputs are written to `req.body` and
+ * `req.params` (coercions and transforms from Zod apply). `req.query` is validated
+ * only — Express 5 exposes it as read-only, so controllers read string values from
+ * `req.query` after validation passes.
  *
  * **errorFormat**
  * - `flat` (default): `z.flattenError` — `formErrors` + `fieldErrors`.
@@ -88,9 +90,8 @@ export const validate = (schemas, options = {}) => {
 
     if (assignParsed) {
       for (const source of SOURCES) {
-        if (source in parsed) {
-          req[source] = parsed[source];
-        }
+        if (source === 'query' || !(source in parsed)) continue;
+        req[source] = parsed[source];
       }
     }
 

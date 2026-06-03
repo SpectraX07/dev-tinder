@@ -22,6 +22,7 @@ export const getTokenCookieOptions = (kind = TOKEN_KIND.ACCESS) => {
   if (cookie.domain) {
     options.domain = cookie.domain;
   }
+  console.log(options);
 
   return options;
 };

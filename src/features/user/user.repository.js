@@ -1,4 +1,6 @@
 import User from './user.model.js';
+import ConnectionRequest from '../request/connectionRequest.model.js';
+const USER_SAFE_DATA = 'firstName lastName photoUrl gender about skills';
 
 export const findByEmail = async (email) => {
   return await User.findOne({ email }).lean();
@@ -41,4 +43,47 @@ export const countByEmail = async (email, id = null) => {
   if (id) query._id = { $ne: id };
 
   return await User.countDocuments(query);
+};
+
+export const getFeed = async (userId, limit, offset) => {
+  const hiddenUserIds = new Set([userId.toString()]);
+
+  const connectionRequests = await ConnectionRequest.find({
+    $or: [{ fromUserId: userId }, { toUserId: userId }],
+    $nor: [{ toUserId: userId, status: 'Interested' }],
+  })
+    .select('fromUserId toUserId')
+    .lean();
+
+  connectionRequests.forEach(({ fromUserId, toUserId }) => {
+    hiddenUserIds.add(fromUserId.toString());
+    hiddenUserIds.add(toUserId.toString());
+  });
+
+  const filter = {
+    _id: { $nin: [...hiddenUserIds] },
+  };
+
+  const [users, total] = await Promise.all([
+    User.find(filter).select(USER_SAFE_DATA).skip(offset).limit(limit).lean(),
+
+    User.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+  const page = Math.floor(offset / limit) + 1;
+
+  return {
+    data: users,
+    pagination: {
+      total,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+      nextPage: page < totalPages ? page + 1 : null,
+      prevPage: page > 1 ? page - 1 : null,
+    },
+  };
 };

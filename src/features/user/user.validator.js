@@ -39,6 +39,7 @@ export const updateUserSchema = z
     age: z.coerce.number().min(18).optional(),
     photoUrl: z.url({ protocol: /^https$/ }).optional(),
     skills: z.array(z.string()).min(1).optional(),
+    about: z.string().max(500).optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
@@ -67,8 +68,8 @@ export const signupSchema = z
     lastName: z.string().min(2).max(50),
     email: z.string().email(),
     password: passwordValidationSchema,
-    gender: z.enum(['Male', 'Female', 'Other']),
-    age: z.coerce.number().min(18),
+    gender: z.enum(['Male', 'Female', 'Other']).default('Other').optional(),
+    age: z.coerce.number().min(18).optional(),
   })
   .strict();
 
@@ -76,5 +77,12 @@ export const loginSchema = z
   .object({
     email: z.string().email(),
     password: z.string().min(8),
+  })
+  .strict();
+
+export const feedQuerySchema = z
+  .object({
+    page: z.coerce.number().min(1).default(1).optional(),
+    limit: z.coerce.number().min(10).max(100).default(10).optional(),
   })
   .strict();

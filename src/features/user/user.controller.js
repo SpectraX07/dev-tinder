@@ -1,8 +1,9 @@
 import { AppError } from '../../core/responseHandler.js';
 import catchAsync from '../../utils/CatchAsync.js';
-import * as userService from './user.service.js';
-import jwt from 'jsonwebtoken';
 import serverConfig from '../../config/server.js';
+import { TOKEN_KIND } from '../../utils/jwt/constants.js';
+import { getTokenCookieOptions } from '../../utils/jwt/cookies.js';
+import * as userService from './user.service.js';
 
 /**
  * PATCH /:id
@@ -49,13 +50,20 @@ export const doLogin = catchAsync(async (req, res) => {
     throw AppError.unauthorized('Invalid credentials');
   }
 
-  const token = await userData.getJWT();
+  const tokenPair = await userService.issueTokenPair(userData._id);
 
-  res.cookie(serverConfig.jwt.access.cookieName, token);
+  res.cookie(
+    serverConfig.jwt.access.cookieName,
+    tokenPair.accessToken,
+    getTokenCookieOptions(TOKEN_KIND.ACCESS),
+  );
+  res.cookie(
+    serverConfig.jwt.refresh.cookieName,
+    tokenPair.refreshToken,
+    getTokenCookieOptions(TOKEN_KIND.REFRESH),
+  );
 
-  res.respond.ok({
-    token,
-  });
+  res.respond.ok(userData);
 });
 
 /**
@@ -70,7 +78,22 @@ export const getProfileDetails = catchAsync(async (req, res) => {
  * POST logout
  */
 
-export const logout = catchAsync(async (req, res, next) => {
-  res.clearCookie(serverConfig.jwt.access.cookieName);
+export const logout = catchAsync(async (req, res) => {
+  res.clearCookie(
+    serverConfig.jwt.access.cookieName,
+    getTokenCookieOptions(TOKEN_KIND.ACCESS),
+  );
+  res.clearCookie(
+    serverConfig.jwt.refresh.cookieName,
+    getTokenCookieOptions(TOKEN_KIND.REFRESH),
+  );
   res.respond.ok(null, 'You have been logged out.');
+});
+
+export const getFeed = catchAsync(async (req, res) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+
+  const response = await userService.getFeed(req.user._id, page, limit);
+  res.respond.ok(response);
 });
