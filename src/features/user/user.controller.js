@@ -1,9 +1,11 @@
 import { AppError } from '../../core/responseHandler.js';
 import catchAsync from '../../utils/CatchAsync.js';
-import serverConfig from '../../config/server.js';
+import serverConfig from '../../core/server.js';
 import { TOKEN_KIND } from '../../utils/jwt/constants.js';
 import { getTokenCookieOptions } from '../../utils/jwt/cookies.js';
 import * as userService from './user.service.js';
+import sendEmail from '../../utils/aws-ses/emailService.js';
+import sendWelcomeEmail from '../../templates/email/welcome.js';
 
 /**
  * PATCH /:id
@@ -35,6 +37,9 @@ export const signup = catchAsync(async (req, res) => {
   await userService.isEmailExists(req.body?.email);
 
   const insert = await userService.createUser(req.body);
+  await sendEmail(
+    sendWelcomeEmail(insert.email, `${insert.firstName} ${insert.lastName}`),
+  );
   res.respond.created(insert);
 });
 
@@ -63,6 +68,8 @@ export const doLogin = catchAsync(async (req, res) => {
     getTokenCookieOptions(TOKEN_KIND.REFRESH),
   );
 
+  const emailResponse = await run();
+  console.log('Email response:', emailResponse);
   res.respond.ok(userData);
 });
 

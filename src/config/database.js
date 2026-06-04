@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import serverConfig from './server.js';
+import serverConfig from '../core/server.js';
 export const connectDB = async () => {
   try {
     await mongoose.connect(serverConfig.database.uri, {

@@ -1,6 +1,6 @@
 import * as jose from 'jose';
 
-import serverConfig from '../../config/server.js';
+import serverConfig from '../../core/server.js';
 import { CLAIM_TOKEN_TYPE, TOKEN_KIND } from './constants.js';
 import { getSigningHeader, getSigningKey } from './keys.js';
 import { expiresInToSeconds } from './duration.js';
@@ -43,8 +43,7 @@ export const signToken = async ({
   const ttl = expiresIn ?? cfg.expiresIn;
   const key = await getSigningKey(kind);
   const jti =
-    jwtId ??
-    (jwtConfig.session.enabled ? crypto.randomUUID() : undefined);
+    jwtId ?? (jwtConfig.session.enabled ? crypto.randomUUID() : undefined);
 
   const builder = new jose.SignJWT({
     ...claims,

@@ -102,7 +102,9 @@ const buildJwtConfig = (env, isProd) => {
 
   if (isAsymmetric) {
     if (isProd && !privateKey) {
-      throw new Error('[config] JWT_PRIVATE_KEY is required for RS256/ES256 in production.');
+      throw new Error(
+        '[config] JWT_PRIVATE_KEY is required for RS256/ES256 in production.',
+      );
     }
     if (isProd && !publicKey && !jwksUri) {
       throw new Error(
@@ -203,6 +205,91 @@ const buildJwtConfig = (env, isProd) => {
 };
 
 /**
+ * @param {string | undefined} accessKeyId
+ * @param {string | undefined} secretAccessKey
+ * @returns {{ accessKeyId: string, secretAccessKey: string } | undefined}
+ */
+const buildStaticCredentials = (accessKeyId, secretAccessKey) => {
+  const key = accessKeyId?.trim();
+  const secret = secretAccessKey?.trim();
+
+  if (!key || !secret) {
+    return undefined;
+  }
+
+  return {
+    accessKeyId: key,
+    secretAccessKey: secret,
+  };
+};
+
+/**
+ * @param {string | undefined} region
+ * @param {{ accessKeyId: string, secretAccessKey: string } | undefined} credentials
+ * @returns {{ region: string, credentials?: { accessKeyId: string, secretAccessKey: string } }}
+ */
+const buildAwsClientOptions = (region, credentials) =>
+  Object.freeze({
+    region,
+    ...(credentials ? { credentials } : {}),
+  });
+
+/**
+ * @param {NodeJS.ProcessEnv} env
+ * @param {boolean} isProd
+ */
+const buildAWSConfig = (env, isProd) => {
+  const globalRegion =
+    env.AWS_REGION?.trim() || env.AWS_DEFAULT_REGION?.trim() || undefined;
+  const globalCredentials = buildStaticCredentials(
+    env.AWS_ACCESS_KEY_ID,
+    env.AWS_SECRET_ACCESS_KEY,
+  );
+
+  const sesEnabled = env.AWS_SES_ENABLED !== 'false';
+  const sesRegionRaw = env.AWS_SES_REGION?.trim() || globalRegion;
+  const sesRegion = sesRegionRaw ?? (isProd ? undefined : 'us-east-1');
+  const sesCredentials =
+    buildStaticCredentials(
+      env.AWS_SES_ACCESS_KEY_ID ?? env.AWS_ACCESS_KEY_ID,
+      env.AWS_SES_SECRET_ACCESS_KEY ?? env.AWS_SECRET_ACCESS_KEY,
+    ) ?? globalCredentials;
+
+  if (isProd && sesEnabled && !sesRegion) {
+    throw new Error(
+      '[config] AWS_SES_REGION (or AWS_REGION) is required in production.',
+    );
+  }
+
+  if (!isProd) {
+    if (sesEnabled && !sesRegionRaw) {
+      console.warn(
+        '[config] AWS_SES_REGION is not set — defaulting to us-east-1.',
+      );
+    }
+    if (sesEnabled && !sesCredentials) {
+      console.warn(
+        '[config] AWS SES credentials are not set — using the AWS SDK credential provider chain.',
+      );
+    }
+  }
+
+  const resolvedSesRegion = sesRegion ?? 'us-east-1';
+
+  return Object.freeze({
+    region: globalRegion ?? resolvedSesRegion,
+    defaultRegion: globalRegion ?? resolvedSesRegion,
+    credentials: globalCredentials,
+    ses: Object.freeze({
+      enabled: sesEnabled,
+      region: resolvedSesRegion,
+      credentials: sesCredentials,
+      client: buildAwsClientOptions(resolvedSesRegion, sesCredentials),
+    }),
+  });
+};
+
+/**
  * @param {NodeJS.ProcessEnv} [env=process.env]
  */
 export const parseServerConfig = (env = process.env) => {
@@ -268,5 +355,6 @@ export const parseServerConfig = (env = process.env) => {
     }),
     redis: Object.freeze({ url: redisUrl }),
     jwt: buildJwtConfig(env, isProd),
+    aws: buildAWSConfig(env, isProd),
   });
 };

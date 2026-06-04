@@ -1,4 +1,4 @@
-import serverConfig from '../../config/server.js';
+import serverConfig from '../../core/server.js';
 import { connectRedis, disconnectRedis } from '../../config/redis.js';
 import { JWT_ERROR_CODE, JwtError } from './errors.js';
 import { RedisSessionStore } from './redis-session-store.js';

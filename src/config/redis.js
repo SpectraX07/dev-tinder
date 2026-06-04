@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 
-import serverConfig from './server.js';
+import serverConfig from '../core/server.js';
 
 /** @type {import('redis').RedisClientType | null} */
 let client = null;

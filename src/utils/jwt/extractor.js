@@ -1,4 +1,4 @@
-import serverConfig from '../../config/server.js';
+import serverConfig from '../../core/server.js';
 import { TOKEN_KIND } from './constants.js';
 
 const jwtConfig = serverConfig.jwt;

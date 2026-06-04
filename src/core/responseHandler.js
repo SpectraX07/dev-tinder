@@ -6,7 +6,7 @@
 
 import * as z from 'zod';
 
-import serverConfig from '../config/server.js';
+import serverConfig from './server.js';
 
 /** `true` in development — derived from `config/server.js` `env` (same as `app.js`). */
 const IS_DEV = serverConfig.isDev;

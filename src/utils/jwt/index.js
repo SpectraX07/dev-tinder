@@ -46,7 +46,7 @@ export {
 export { getTokenCookieOptions } from './cookies.js';
 export { rotateTokenPair } from './rotation.js';
 
-import serverConfig from '../../config/server.js';
+import serverConfig from '../../core/server.js';
 
 export { serverConfig };
 export const jwtConfig = serverConfig.jwt;

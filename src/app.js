@@ -21,7 +21,7 @@ import {
   HTTP,
 } from './core/responseHandler.js';
 
-import serverConfig from './config/server.js';
+import serverConfig from './core/server.js';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -141,9 +141,7 @@ const bootstrap = async () => {
   await initSessionStore();
 
   const server = app.listen(PORT, HOST, () => {
-    log.info(
-      `Server running on http://${HOST}:${PORT} [${serverConfig.env}]`,
-    );
+    log.info(`Server running on http://${HOST}:${PORT} [${serverConfig.env}]`);
   });
 
   // ── Graceful shutdown ───────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import * as jose from 'jose';
 
-import serverConfig from '../../config/server.js';
+import serverConfig from '../../core/server.js';
 import { AppError } from '../../core/responseHandler.js';
 import { CLAIM_TOKEN_TYPE, TOKEN_KIND } from './constants.js';
 import { JWT_ERROR_CODE, JwtError, mapJoseError } from './errors.js';
@@ -53,7 +53,8 @@ export const verifyToken = async (token, expectedKind) => {
     }
 
     if (expectedKind === TOKEN_KIND.REFRESH) {
-      const jti = typeof result.payload.jti === 'string' ? result.payload.jti : undefined;
+      const jti =
+        typeof result.payload.jti === 'string' ? result.payload.jti : undefined;
       await assertSessionActive(jti);
     }
 
