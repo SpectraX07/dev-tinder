@@ -68,8 +68,6 @@ export const doLogin = catchAsync(async (req, res) => {
     getTokenCookieOptions(TOKEN_KIND.REFRESH),
   );
 
-  const emailResponse = await run();
-  console.log('Email response:', emailResponse);
   res.respond.ok(userData);
 });
 
