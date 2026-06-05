@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import pino from 'pino';
 import helmet from 'helmet';
