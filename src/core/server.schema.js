@@ -1,9 +1,15 @@
 import { z } from 'zod';
 
-const DEV_ACCESS_SECRET =
-  'EnZZCoZ7Ss4MVQcjeGlEzxtx7/R5ObWcG1XpslduI+i9kmUDl38ZU6AEFXWP99+eC2DXu/Xa+/xIDyddfbMv6w==';
+// ─────────────────────────────────────────────────────────────────────────────
+// Dev-only fallback secrets — obviously fake, never commit real secrets
+// ─────────────────────────────────────────────────────────────────────────────
+const DEV_ACCESS_SECRET = 'dev-only-insecure-access-secret-do-not-use-in-prod';
 const DEV_REFRESH_SECRET =
-  '/6QIzy1p6xswm5cb/v2HFwHkT3TjCx0EBhTVvUDW4odLK5mnHwaGS3NpGLRupCG/9n7N5Hv4QA8GauVTYahBig==';
+  'dev-only-insecure-refresh-secret-do-not-use-in-prod';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Primitive schemas
+// ─────────────────────────────────────────────────────────────────────────────
 
 const COMPACT_DURATION_RE = /^(\d+)([smhdwy])$/i;
 const WORD_DURATION_RE = /^(\d+)\s+([a-z]+)$/i;
@@ -21,7 +27,11 @@ const durationSchema = z.string().trim().min(1).refine(isValidExpiresIn, {
 const secretSchema = (minLength) =>
   z.string().min(minLength, `Secret must be at least ${minLength} characters`);
 
-const sameSiteSchema = z.enum(['strict', 'lax', 'none']);
+// sameSite: normalize to lowercase inside Zod, not outside
+const sameSiteSchema = z.preprocess(
+  (v) => (typeof v === 'string' ? v.toLowerCase() : v),
+  z.enum(['strict', 'lax', 'none']),
+);
 
 const boolFromEnv = z
   .union([
@@ -37,14 +47,70 @@ const nodeEnvSchema = z
   .enum(['development', 'production', 'test'])
   .default('development');
 
+/** @param {string} value */
+const isValidIanaTimezone = (value) => {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const timezoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .default('UTC')
+  .refine(isValidIanaTimezone, {
+    message:
+      'Must be a valid IANA timezone (e.g. UTC, Asia/Kolkata, America/New_York)',
+  });
+
+const uvThreadpoolSizeSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(128)
+  .default(4);
+
+// Redis URL validated properly through Zod, not raw string fallback
+const redisUrlSchema = z
+  .string()
+  .trim()
+  .url('REDIS_URL must be a valid URL (e.g. redis://127.0.0.1:6379)')
+  .default('redis://127.0.0.1:6379');
+
 /**
+ * Parses and validates ALLOWED_ORIGINS.
+ * Returns '*' if unset, otherwise validates each entry is a valid URL.
  * @param {string | undefined} originsStr
  * @returns {string[] | '*'}
  */
 const parseCorsOrigins = (originsStr) => {
   if (!originsStr?.trim()) return '*';
-  return originsStr.split(',').map((origin) => origin.trim());
+
+  const origins = originsStr
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const schema = z
+    .array(
+      z
+        .string()
+        .url(
+          'Each ALLOWED_ORIGINS entry must be a valid URL (e.g. https://example.com)',
+        ),
+    )
+    .min(1);
+
+  return schema.parse(origins);
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JWT config
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * @param {NodeJS.ProcessEnv} env
@@ -53,8 +119,7 @@ const parseCorsOrigins = (originsStr) => {
 const buildJwtConfig = (env, isProd) => {
   const minSecretLength = 32;
   const accessSecretRaw = env.JWT_ACCESS_SECRET ?? env.JWT_SECRET;
-  const refreshSecretRaw =
-    env.JWT_REFRESH_SECRET ?? accessSecretRaw ?? env.JWT_SECRET;
+  const refreshSecretRaw = env.JWT_REFRESH_SECRET;
 
   if (isProd && !accessSecretRaw) {
     throw new Error(
@@ -67,7 +132,26 @@ const buildJwtConfig = (env, isProd) => {
   }
 
   const accessSecret = accessSecretRaw ?? DEV_ACCESS_SECRET;
-  const refreshSecret = refreshSecretRaw ?? DEV_REFRESH_SECRET;
+
+  // Refresh falls back to access secret only as a last resort — warn loudly
+  const refreshSecret = (() => {
+    if (refreshSecretRaw) return refreshSecretRaw;
+
+    if (!isProd) {
+      if (accessSecretRaw) {
+        console.warn(
+          '[config] JWT_REFRESH_SECRET is not set — falling back to the access secret. ' +
+            'Set a separate JWT_REFRESH_SECRET for proper security.',
+        );
+        return accessSecretRaw;
+      }
+      console.warn(
+        '[config] JWT_REFRESH_SECRET is not set — using a development-only fallback.',
+      );
+    }
+
+    return DEV_REFRESH_SECRET;
+  })();
 
   if (!isProd) {
     if (!accessSecretRaw) {
@@ -75,22 +159,33 @@ const buildJwtConfig = (env, isProd) => {
         '[config] JWT_ACCESS_SECRET is not set — using a development-only fallback.',
       );
     }
-    if (!refreshSecretRaw) {
-      console.warn(
-        '[config] JWT_REFRESH_SECRET is not set — using a development-only fallback.',
-      );
-    }
   }
+
+  /**
+   * Descriptor map — add new algorithms here only; all downstream logic is derived.
+   * @type {Record<string, { asymmetric: boolean }>}
+   */
+  const SUPPORTED_ALGORITHMS = {
+    HS256: { asymmetric: false },
+    RS256: { asymmetric: true },
+    ES256: { asymmetric: true },
+    RS384: { asymmetric: true },
+    RS512: { asymmetric: true },
+    ES384: { asymmetric: true },
+    ES512: { asymmetric: true },
+  };
 
   const algorithm = env.JWT_ALGORITHM ?? 'HS256';
-  const asymmetricAlgorithms = ['RS256', 'ES256'];
-  const isAsymmetric = asymmetricAlgorithms.includes(algorithm);
+  const algorithmMeta = SUPPORTED_ALGORITHMS[algorithm];
 
-  if (!['HS256', ...asymmetricAlgorithms].includes(algorithm)) {
+  if (!algorithmMeta) {
     throw new Error(
-      `[config] JWT_ALGORITHM "${algorithm}" is not supported. Use HS256, RS256, or ES256.`,
+      `[config] JWT_ALGORITHM "${algorithm}" is not supported. ` +
+        `Use one of: ${Object.keys(SUPPORTED_ALGORITHMS).join(', ')}.`,
     );
   }
+
+  const isAsymmetric = algorithmMeta.asymmetric;
 
   /** @param {string | undefined} raw */
   const normalizePem = (raw) => raw?.replace(/\\n/g, '\n').trim() || undefined;
@@ -117,9 +212,9 @@ const buildJwtConfig = (env, isProd) => {
   const sessionKeyPrefix =
     env.JWT_REVOKE_KEY_PREFIX?.trim() || 'devtinder:jwt:revoked:';
 
-  const clockTolerance = env.JWT_CLOCK_TOLERANCE?.trim() || '5s';
-
-  const sameSite = (env.JWT_COOKIE_SAME_SITE ?? 'lax').toLowerCase();
+  const clockTolerance = durationSchema
+    .default('5s')
+    .parse(env.JWT_CLOCK_TOLERANCE);
 
   const parsed = z
     .object({
@@ -135,6 +230,7 @@ const buildJwtConfig = (env, isProd) => {
         .trim()
         .optional()
         .transform((v) => (v === '' ? undefined : v)),
+      // sameSite normalization now happens inside the schema
       cookieSameSite: sameSiteSchema.default('lax'),
       cookieHttpOnly: boolFromEnv.default(true),
       cookieSecure: boolFromEnv,
@@ -148,7 +244,8 @@ const buildJwtConfig = (env, isProd) => {
       refreshCookieName: env.JWT_REFRESH_COOKIE,
       cookiePath: env.JWT_COOKIE_PATH,
       cookieDomain: env.JWT_COOKIE_DOMAIN,
-      cookieSameSite: sameSite,
+      // No more manual .toLowerCase() before passing in
+      cookieSameSite: env.JWT_COOKIE_SAME_SITE,
       cookieHttpOnly: env.JWT_COOKIE_HTTP_ONLY,
       cookieSecure: env.JWT_COOKIE_SECURE,
     });
@@ -169,8 +266,8 @@ const buildJwtConfig = (env, isProd) => {
   return Object.freeze({
     issuer: parsed.issuer,
     audience: parsed.audience,
-    algorithm: /** @type {'HS256' | 'RS256' | 'ES256'} */ (algorithm),
-    algorithms: [/** @type {'HS256' | 'RS256' | 'ES256'} */ (algorithm)],
+    algorithm: /** @type {keyof typeof SUPPORTED_ALGORITHMS} */ (algorithm),
+    algorithms: [/** @type {keyof typeof SUPPORTED_ALGORITHMS} */ (algorithm)],
     mode: isAsymmetric ? 'asymmetric' : 'symmetric',
     minSecretLength,
     keyId,
@@ -204,6 +301,15 @@ const buildJwtConfig = (env, isProd) => {
   });
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AWS config
+// ─────────────────────────────────────────────────────────────────────────────
+
+// AWS access key IDs are 20 uppercase alphanumeric chars starting with AKIA/ASIA/AROA etc.
+// Secret access keys are 40 base64-ish chars. Patterns match real AWS credentials.
+const AWS_ACCESS_KEY_RE = /^[A-Z0-9]{16,128}$/;
+const AWS_SECRET_KEY_RE = /^[A-Za-z0-9/+=]{16,128}$/;
+
 /**
  * @param {string | undefined} accessKeyId
  * @param {string | undefined} secretAccessKey
@@ -213,20 +319,28 @@ const buildStaticCredentials = (accessKeyId, secretAccessKey) => {
   const key = accessKeyId?.trim();
   const secret = secretAccessKey?.trim();
 
-  if (!key || !secret) {
-    return undefined;
+  if (!key || !secret) return undefined;
+
+  if (!AWS_ACCESS_KEY_RE.test(key)) {
+    throw new Error(
+      `[config] AWS access key ID "${key}" looks invalid. ` +
+        'Expected 16–128 uppercase alphanumeric characters.',
+    );
   }
 
-  return {
-    accessKeyId: key,
-    secretAccessKey: secret,
-  };
+  if (!AWS_SECRET_KEY_RE.test(secret)) {
+    throw new Error(
+      '[config] AWS secret access key looks invalid. ' +
+        'Expected 16–128 base64-safe characters.',
+    );
+  }
+
+  return { accessKeyId: key, secretAccessKey: secret };
 };
 
 /**
  * @param {string | undefined} region
  * @param {{ accessKeyId: string, secretAccessKey: string } | undefined} credentials
- * @returns {{ region: string, credentials?: { accessKeyId: string, secretAccessKey: string } }}
  */
 const buildAwsClientOptions = (region, credentials) =>
   Object.freeze({
@@ -290,6 +404,57 @@ const buildAWSConfig = (env, isProd) => {
 };
 
 /**
+ * @param {NodeJS.ProcessEnv} env
+ */
+const buildQueueConfig = (env) => {
+  const queue = z
+    .object({
+      PENDING_REQUEST_ENQUEUE_BATCH_SIZE: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(100),
+      PENDING_REQUEST_EMAIL_CONCURRENCY: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(10),
+      PENDING_REQUEST_SCAN_BATCH_SIZE: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(500),
+    })
+    .parse({
+      PENDING_REQUEST_ENQUEUE_BATCH_SIZE:
+        env.PENDING_REQUEST_ENQUEUE_BATCH_SIZE,
+      PENDING_REQUEST_EMAIL_CONCURRENCY: env.PENDING_REQUEST_EMAIL_CONCURRENCY,
+      PENDING_REQUEST_SCAN_BATCH_SIZE: env.PENDING_REQUEST_SCAN_BATCH_SIZE,
+    });
+
+  return Object.freeze({
+    bullmq: Object.freeze({
+      prefix: 'devtinder:bull',
+    }),
+    pendingRequestEmail: Object.freeze({
+      enqueueBatchSize: queue.PENDING_REQUEST_ENQUEUE_BATCH_SIZE,
+      emailWorkerConcurrency: queue.PENDING_REQUEST_EMAIL_CONCURRENCY,
+      scanCursorBatchSize: queue.PENDING_REQUEST_SCAN_BATCH_SIZE,
+      defaultJobOptions: Object.freeze({
+        removeOnComplete: { count: 1_000 },
+        removeOnFail: { count: 5_000 },
+        attempts: 3,
+        backoff: Object.freeze({ type: 'exponential', delay: 5_000 }),
+      }),
+    }),
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main export
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
  * @param {NodeJS.ProcessEnv} [env=process.env]
  */
 export const parseServerConfig = (env = process.env) => {
@@ -311,6 +476,10 @@ export const parseServerConfig = (env = process.env) => {
       DB_NAME: z.string().trim().min(1).default('devTinder'),
       DB_USER: z.string().optional(),
       DB_PASS: z.string().optional(),
+      TZ: timezoneSchema,
+      UV_THREADPOOL_SIZE: uvThreadpoolSizeSchema,
+      // Redis validated via Zod, not raw fallback
+      REDIS_URL: redisUrlSchema,
     })
     .parse({
       NODE_ENV: env.NODE_ENV,
@@ -323,14 +492,15 @@ export const parseServerConfig = (env = process.env) => {
       DB_NAME: env.DB_NAME,
       DB_USER: env.DB_USER,
       DB_PASS: env.DB_PASS,
+      TZ: env.TZ,
+      UV_THREADPOOL_SIZE: env.UV_THREADPOOL_SIZE,
+      REDIS_URL: env.REDIS_URL,
     });
 
   const envName = runtime.NODE_ENV;
   const isProd = envName === 'production';
   const isDev = envName === 'development';
   const isTest = envName === 'test';
-
-  const redisUrl = env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379';
 
   return Object.freeze({
     env: envName,
@@ -339,6 +509,8 @@ export const parseServerConfig = (env = process.env) => {
     isTest,
     port: runtime.PORT,
     host: runtime.HOST,
+    timezone: runtime.TZ,
+    uvThreadpoolSize: runtime.UV_THREADPOOL_SIZE,
     logLevel: runtime.LOG_LEVEL ?? (isDev ? 'debug' : 'info'),
     cors: Object.freeze({
       origin: parseCorsOrigins(runtime.ALLOWED_ORIGINS),
@@ -350,10 +522,11 @@ export const parseServerConfig = (env = process.env) => {
     database: Object.freeze({
       uri: runtime.MONGO_URI,
       name: runtime.DB_NAME,
-      user: runtime.DB_USER ?? '',
-      pass: runtime.DB_PASS ?? '',
+      user: runtime.DB_USER,
+      pass: runtime.DB_PASS,
     }),
-    redis: Object.freeze({ url: redisUrl }),
+    redis: Object.freeze({ url: runtime.REDIS_URL }),
+    queues: buildQueueConfig(env),
     jwt: buildJwtConfig(env, isProd),
     aws: buildAWSConfig(env, isProd),
   });

@@ -118,3 +118,18 @@ export const findConnections = async (userId) => {
     row.fromUserId._id.equals(userId) ? row.toUserId : row.fromUserId,
   );
 };
+
+export const getPendingRequestsBetween = async (startDate, endDate) => {
+  return await connectionRequestRepository.getPendingRequestsBetween(
+    startDate,
+    endDate,
+  );
+};
+
+export const streamPendingRecipientEmails = (startDate, endDate, options) => {
+  return connectionRequestRepository.streamPendingRecipientEmails(
+    startDate,
+    endDate,
+    options,
+  );
+};

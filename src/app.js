@@ -12,6 +12,7 @@ import {
   initSessionStore,
   closeSessionStore,
 } from './utils/jwt/session-store.js';
+import { closeQueues, startQueueWorkers } from './queues/index.js';
 import router from './routes/index.routes.js';
 import {
   attach,
@@ -138,6 +139,9 @@ app.use(errorMiddleware);
 const bootstrap = async () => {
   await connectDB();
   await initSessionStore();
+  await startQueueWorkers();
+
+  await import('./jobs/pendingRequests.js');
 
   const server = app.listen(PORT, HOST, () => {
     log.info(`Server running on http://${HOST}:${PORT} [${serverConfig.env}]`);
@@ -161,6 +165,7 @@ const bootstrap = async () => {
       }
 
       try {
+        await closeQueues();
         await closeSessionStore();
       } catch (closeErr) {
         log.error({ err: closeErr }, 'Error closing session store');
