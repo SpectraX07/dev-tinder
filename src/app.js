@@ -45,6 +45,7 @@ setResponseLogger(log);
 const app = express();
 
 // ─── Security ────────────────────────────────────────────────────────────────
+app.set('trust proxy', 1);
 
 app.use(
   helmet({
