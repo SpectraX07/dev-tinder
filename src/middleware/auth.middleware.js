@@ -4,8 +4,6 @@ import * as userService from '../features/user/user.service.js';
 import { verifyRequestAccessOrThrow } from '../utils/jwt/verifier.js';
 
 export const userAuth = catchAsync(async (req, res, next) => {
-  console.log(req.cookies);
-
   const { payload } = await verifyRequestAccessOrThrow(req, {
     prefer: 'cookie',
   });
