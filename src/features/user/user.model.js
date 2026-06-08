@@ -19,6 +19,13 @@ const userSchema = new Schema(
       type: String,
       default: 'https://placehold.co/200',
     },
+    isPremium: { type: Boolean, default: false },
+    membershipType: {
+      type: String,
+    },
+    membershipExpiry: {
+      type: Date,
+    },
     about: {
       type: String,
       default: 'This is default about of the user.',

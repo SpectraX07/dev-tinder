@@ -21,13 +21,32 @@ const IS_DEV = serverConfig.isDev;
 
 /** @type {ResponseLogger} */
 const defaultResponseLogger = {
-  error: (...args) => {
-    console.error(...args);
+  error: (bindings, msg) => {
+    if (typeof bindings === 'string') {
+      console.error(bindings, msg ?? '');
+      return;
+    }
+    const err = bindings?.err;
+    console.error(msg, err ?? bindings);
   },
 };
 
 /** @type {ResponseLogger} */
 let responseLogger = defaultResponseLogger;
+
+/**
+ * Logs an error with bindings pino can serialize (`err` → message + stack).
+ *
+ * @param {string} message
+ * @param {unknown} [err]
+ */
+const logError = (message, err) => {
+  if (err !== undefined) {
+    responseLogger.error({ err }, message);
+  } else {
+    responseLogger.error(message);
+  }
+};
 
 /**
  * Installs the logger used for server-side error reporting. Call once at startup.
@@ -323,22 +342,17 @@ const jsonError = (res, statusCode, payload) =>
  */
 export const errorMiddleware = (err, _req, res, _next) => {
   if (res.headersSent) {
-    if (IS_DEV) {
-      responseLogger.error(
-        '[errorMiddleware] Response already sent; skipping JSON body.',
-        err,
-      );
-    } else {
-      responseLogger.error(
-        '[errorMiddleware] Response already sent; skipping.',
-        err.message,
-      );
-    }
+    logError(
+      IS_DEV
+        ? '[errorMiddleware] Response already sent; skipping JSON body.'
+        : '[errorMiddleware] Response already sent; skipping.',
+      err,
+    );
     return;
   }
 
   if (!(err instanceof AppError) || !err.isOperational) {
-    responseLogger.error('[Unhandled Error]', err);
+    logError('[Unhandled Error]', err);
   }
 
   if (err instanceof ValidationError) {
@@ -349,7 +363,7 @@ export const errorMiddleware = (err, _req, res, _next) => {
   }
 
   if (err instanceof z.ZodError) {
-    if (IS_DEV) responseLogger.error('[ZodError]\n' + z.prettifyError(err));
+    if (IS_DEV) logError('[ZodError]\n' + z.prettifyError(err));
     return jsonError(res, HTTP.UNPROCESSABLE_ENTITY, {
       message: 'Validation failed',
       errors: z.flattenError(err),

@@ -1,5 +1,5 @@
 import { AppError } from '../core/responseHandler.js';
-import catchAsync from '../utils/CatchAsync.js';
+import catchAsync from '../utils/catchAsync.js';
 import * as userService from '../features/user/user.service.js';
 import { verifyRequestAccessOrThrow } from '../utils/jwt/verifier.js';
 

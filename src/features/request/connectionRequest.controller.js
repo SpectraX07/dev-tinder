@@ -1,4 +1,4 @@
-import catchAsync from '../../utils/CatchAsync.js';
+import catchAsync from '../../utils/catchAsync.js';
 import * as connectionRequestService from './connectionRequest.service.js';
 
 export const sendConnectionRequest = catchAsync(async (req, res) => {

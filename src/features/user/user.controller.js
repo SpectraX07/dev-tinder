@@ -1,5 +1,5 @@
 import { AppError } from '../../core/responseHandler.js';
-import catchAsync from '../../utils/CatchAsync.js';
+import catchAsync from '../../utils/catchAsync.js';
 import serverConfig from '../../core/server.js';
 import { TOKEN_KIND } from '../../utils/jwt/constants.js';
 import { getTokenCookieOptions } from '../../utils/jwt/cookies.js';

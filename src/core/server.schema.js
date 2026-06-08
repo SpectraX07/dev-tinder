@@ -450,6 +450,35 @@ const buildQueueConfig = (env) => {
   });
 };
 
+/**
+ * @param {NodeJS.ProcessEnv} env
+ */
+const buildRazorpayConfig = (env) => {
+  const razorpay = z
+    .object({
+      RAZORPAY_KEY_ID: z
+        .string()
+        .trim()
+        .regex(/^rzp_(live|test)_[A-Za-z0-9]+$/, 'Invalid Razorpay key ID'),
+      RAZORPAY_KEY_SECRET: z
+        .string()
+        .trim()
+        .min(20, 'Invalid Razorpay key secret'),
+      RAZORPAY_WEBHOOK_SECRET: z.string().trim().optional(),
+    })
+    .parse({
+      RAZORPAY_KEY_ID: env.RAZORPAY_KEY_ID,
+      RAZORPAY_KEY_SECRET: env.RAZORPAY_KEY_SECRET,
+      RAZORPAY_WEBHOOK_SECRET: env.RAZORPAY_WEBHOOK_SECRET,
+    });
+
+  return Object.freeze({
+    key: razorpay.RAZORPAY_KEY_ID,
+    secret: razorpay.RAZORPAY_KEY_SECRET,
+    webhookSecret: razorpay.RAZORPAY_WEBHOOK_SECRET,
+  });
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main export
 // ─────────────────────────────────────────────────────────────────────────────
@@ -529,5 +558,6 @@ export const parseServerConfig = (env = process.env) => {
     queues: buildQueueConfig(env),
     jwt: buildJwtConfig(env, isProd),
     aws: buildAWSConfig(env, isProd),
+    razorpay: buildRazorpayConfig(env),
   });
 };
