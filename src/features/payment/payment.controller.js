@@ -27,6 +27,12 @@ export const createOrder = catchAsync(async (req, res) => {
 });
 
 export const razorpayWebhook = catchAsync(async (req, res) => {
+  console.log('Received Razorpay webhook:');
+  console.log({
+    websocketSecret: serverConfig.razorpay.webhookSecret,
+    payload: req.body,
+    signature: req.get('x-razorpay-signature'),
+  });
   const response = await paymentService.handleRazorpayWebhook(
     serverConfig.razorpay.webhookSecret,
     req.body,
