@@ -30,8 +30,12 @@ export const savePaymentDetails = async (userId, order) => {
   });
 };
 
-export const handleRazorpayWebhook = async (webhookSecret, payload) => {
-  const webhookSignature = payload.headers['x-razorpay-signature'];
+export const handleRazorpayWebhook = async (
+  webhookSecret,
+  payload,
+  signature,
+) => {
+  const webhookSignature = signature;
   const isWebhookValid = validateWebhookSignature(
     JSON.stringify(payload),
     webhookSignature,

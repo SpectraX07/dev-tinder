@@ -30,6 +30,7 @@ export const razorpayWebhook = catchAsync(async (req, res) => {
   const response = await paymentService.handleRazorpayWebhook(
     serverConfig.razorpay.webhookSecret,
     req.body,
+    req.get('x-razorpay-signature'),
   );
 
   return res.status(200).json({ success: true, message: 'Webhook processed' });
