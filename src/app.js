@@ -45,14 +45,7 @@ setResponseLogger(log);
 const app = express();
 
 // ─── Security ────────────────────────────────────────────────────────────────
-app.set('trust proxy', 1);
-
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-    contentSecurityPolicy: IS_DEV ? false : undefined,
-  }),
-);
+app.enable('trust proxy');
 
 app.use(
   cors({
@@ -60,6 +53,13 @@ app.use(
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Forwarded-For'],
     credentials: true,
+  }),
+);
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: IS_DEV ? false : undefined,
   }),
 );
 
