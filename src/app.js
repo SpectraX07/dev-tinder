@@ -57,7 +57,7 @@ app.use(
   cors({
     origin: serverConfig.cors.origin,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Forwarded-For'],
     credentials: true,
   }),
 );
