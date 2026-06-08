@@ -65,6 +65,10 @@ app.use(
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 
+console.log('IP DEBUG:', {
+  trustProxy: app.get('trust proxy'),
+});
+
 app.use(
   rateLimit({
     windowMs: serverConfig.rateLimit.windowMs,
