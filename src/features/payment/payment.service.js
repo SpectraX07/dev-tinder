@@ -49,20 +49,23 @@ export const handleRazorpayWebhook = async (
   if (payload.event === 'payment.captured') {
     const orderId = payload.payload.payment.entity.order_id;
     const membershipType = payload.payload.payment.entity.notes.membershipType;
-    await paymentRepository.updateStatusByOrderId(orderId, 'Completed');
-    await paymentRepository.updatePaymentDetailsForUser(
-      payload.payload.payment.entity.notes.userId,
-      { membershipType },
+    const response = await paymentRepository.updateStatusByOrderId(
+      orderId,
+      'Completed',
     );
+    await paymentRepository.updatePaymentDetailsForUser(response.userId, {
+      membershipType,
+    });
   }
 
   if (payload.event === 'payment.failed') {
     const orderId = payload.payload.payment.entity.order_id;
-    const membershipType = payload.payload.payment.entity.notes.membershipType;
-    await paymentRepository.updateStatusByOrderId(orderId, 'Failed');
-    await paymentRepository.updatePaymentDetailsForUser(
-      payload.payload.payment.entity.notes.userId,
-      { membershipType },
+    const response = await paymentRepository.updateStatusByOrderId(
+      orderId,
+      'Failed',
     );
+    await paymentRepository.updatePaymentDetailsForUser(response.userId, {
+      membershipType: '',
+    });
   }
 };
