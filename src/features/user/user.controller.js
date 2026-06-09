@@ -102,3 +102,8 @@ export const getFeed = catchAsync(async (req, res) => {
   const response = await userService.getFeed(req.user._id, page, limit);
   res.respond.ok(response);
 });
+
+export const isUserPremium = catchAsync(async (req, res) => {
+  const isPremium = req?.user.isPremium === true;
+  res.respond.ok({ isPremium });
+});

@@ -1,6 +1,7 @@
 import User from './user.model.js';
 import ConnectionRequest from '../request/connectionRequest.model.js';
-const USER_SAFE_DATA = 'firstName lastName photoUrl gender about skills';
+const USER_SAFE_DATA =
+  'firstName lastName photoUrl gender about skills isPremium';
 
 export const findByEmail = async (email) => {
   return await User.findOne({ email }).lean();

@@ -58,4 +58,7 @@ router.get(
   userController.getFeed,
 );
 
+// Is user premium
+router.get('/is-premium', userAuth, userController.isUserPremium);
+
 export default router;
