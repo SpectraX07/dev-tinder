@@ -45,7 +45,7 @@ setResponseLogger(log);
 const app = express();
 
 // ─── Security ────────────────────────────────────────────────────────────────
-app.enable('trust proxy');
+// app.enable('trust proxy');
 
 app.use(
   cors({
