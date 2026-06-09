@@ -12,6 +12,7 @@ export const updateStatusByOrderId = async (orderId, status) => {
     { status },
     { returnDocument: 'after' },
   );
+  return response;
 };
 
 export const updatePaymentDetailsForUser = async (userId, paymentData) => {
