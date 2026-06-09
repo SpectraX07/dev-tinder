@@ -47,9 +47,9 @@ export const handleRazorpayWebhook = async (
   }
 
   if (payload.event === 'payment.captured') {
-    const paymentId = payload.payload.payment.entity.id;
+    const orderId = payload.payload.payment.entity.order_id;
     const membershipType = payload.payload.payment.entity.notes.membershipType;
-    await paymentRepository.updateStatusByPaymentId(paymentId, 'Completed');
+    await paymentRepository.updateStatusByOrderId(orderId, 'Completed');
     await paymentRepository.updatePaymentDetailsForUser(
       payload.payload.payment.entity.notes.userId,
       { membershipType },
@@ -57,9 +57,9 @@ export const handleRazorpayWebhook = async (
   }
 
   if (payload.event === 'payment.failed') {
-    const paymentId = payload.payload.payment.entity.id;
+    const orderId = payload.payload.payment.entity.order_id;
     const membershipType = payload.payload.payment.entity.notes.membershipType;
-    await paymentRepository.updateStatusByPaymentId(paymentId, 'Failed');
+    await paymentRepository.updateStatusByOrderId(orderId, 'Failed');
     await paymentRepository.updatePaymentDetailsForUser(
       payload.payload.payment.entity.notes.userId,
       { membershipType },

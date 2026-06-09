@@ -6,15 +6,15 @@ export const create = async (paymentData) => {
   return await payment.save();
 };
 
-export const updateStatusByPaymentId = async (paymentId, status) => {
+export const updateStatusByOrderId = async (orderId, status) => {
   const response = await Payment.findOneAndUpdate(
-    { orderId: paymentId },
+    { orderId },
     { status },
-    { new: true },
+    { returnDocument: after },
   );
 };
 
-const updatePaymentDetailsForUser = async (userId, paymentData) => {
+export const updatePaymentDetailsForUser = async (userId, paymentData) => {
   const user = await User.findById(userId);
   if (!user) {
     throw new Error('User not found');
