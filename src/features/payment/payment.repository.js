@@ -10,7 +10,7 @@ export const updateStatusByOrderId = async (orderId, status) => {
   const response = await Payment.findOneAndUpdate(
     { orderId },
     { status },
-    { returnDocument: after },
+    { returnDocument: 'after' },
   );
 };
 
