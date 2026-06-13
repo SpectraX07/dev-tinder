@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import http from 'node:http';
+import { initSocket } from './config/socket.js';
 
 import { connectDB } from './config/database.js';
 import {
@@ -22,27 +24,23 @@ import {
 } from './core/responseHandler.js';
 
 import serverConfig from './core/server.js';
+import log from './utils/logger.js';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const { isDev: IS_DEV, isTest: IS_TEST, port: PORT, host: HOST } = serverConfig;
 
 // ─── Logger ──────────────────────────────────────────────────────────────────
-
-const log = pino(
-  IS_DEV
-    ? {
-        level: serverConfig.logLevel,
-        transport: { target: 'pino-pretty', options: { colorize: true } },
-      }
-    : { level: serverConfig.logLevel },
-);
-
 setResponseLogger(log);
 
-// ─── App ──────────────────────────────────────────────────────────────────────
+// ─── App & httpServer ──────────────────────────────────────────────────────────────────────
 
 const app = express();
+const httpServer = http.createServer(app);
+
+// ─── Socket.io ───────────────────────────────────────────────────────────────
+
+initSocket(httpServer);
 
 // ─── Security ────────────────────────────────────────────────────────────────
 // app.enable('trust proxy');
@@ -64,11 +62,6 @@ app.use(
 );
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
-
-console.log('IP DEBUG:', {
-  trustProxy: app.get('trust proxy'),
-});
-
 app.use(
   rateLimit({
     windowMs: serverConfig.rateLimit.windowMs,
@@ -148,7 +141,7 @@ const bootstrap = async () => {
 
   await import('./jobs/pendingRequests.js');
 
-  const server = app.listen(PORT, HOST, () => {
+  const server = httpServer.listen(PORT, HOST, () => {
     log.info(`Server running on http://${HOST}:${PORT} [${serverConfig.env}]`);
   });
 
